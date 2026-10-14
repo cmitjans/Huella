@@ -26,12 +26,12 @@ foreach ($a in $lista.tree) {
 "Listo. Elige esta carpeta en Chrome: $carpeta"
 ```
 
-Luego en Chrome abre `chrome://extensions`, activa **Modo de desarrollador**, toca **Cargar extensión sin empaquetar** y elige la carpeta que indica el mensaje final. Para **actualizar**, pega el mismo comando otra vez y toca el botón de recargar de Huella en `chrome://extensions`.
+Luego en Chrome abre `chrome://extensions`, activa **Modo de desarrollador**, toca **Cargar descomprimida** y elige la carpeta que indica el mensaje final. Para **actualizar**, pega el mismo comando otra vez y toca el botón de recargar de Huella en `chrome://extensions`.
 
 ### Con GitHub Desktop
 
 1. Copia el repositorio a tu computador. La forma más simple es con [GitHub Desktop](https://desktop.github.com): **File → Clone repository**, elige `cmitjans/Huella` y una carpeta fija (por ejemplo, Documentos). Si usas la terminal: `git clone https://github.com/cmitjans/Huella.git`.
-2. En Chrome abre `chrome://extensions`, activa **Modo de desarrollador** (arriba a la derecha) y toca **Cargar extensión sin empaquetar**. Elige la carpeta `Huella` que se creó.
+2. En Chrome abre `chrome://extensions`, activa **Modo de desarrollador** (arriba a la derecha) y toca **Cargar descomprimida**. Elige la carpeta `Huella` que se creó.
 3. Toca el ícono de la pieza de rompecabezas en la barra de Chrome y fija Huella con el alfiler.
 
 Para **actualizar**: en GitHub Desktop toca **Fetch origin** y luego **Pull origin** (o `git pull` en la terminal), y después el botón de recargar de Huella en `chrome://extensions`. Lo registrado se conserva mientras uses siempre la misma carpeta.
