@@ -16,17 +16,22 @@ Abre **PowerShell** desde el menú Inicio, pega esto y presiona Enter. Baja los 
 $carpeta = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'Huella'
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = 'Tls12'
-$lista = Invoke-RestMethod 'https://api.github.com/repos/cmitjans/Huella/git/trees/main?recursive=1'
+$repo = 'https://api.github.com/repos/cmitjans/Huella'
+$sha = (Invoke-RestMethod "$repo/commits/main").sha
+$lista = Invoke-RestMethod "$repo/git/trees/$($sha)?recursive=1"
 foreach ($a in $lista.tree) {
   if ($a.type -ne 'blob' -or $a.path -notmatch '^(manifest\.json|src/|ui/|iconos/)') { continue }
   $destino = Join-Path $carpeta $a.path
   New-Item -ItemType Directory -Force -Path (Split-Path $destino) | Out-Null
-  Invoke-WebRequest -UseBasicParsing "https://raw.githubusercontent.com/cmitjans/Huella/main/$($a.path)" -OutFile $destino
+  Invoke-WebRequest -UseBasicParsing "https://raw.githubusercontent.com/cmitjans/Huella/$sha/$($a.path)" -OutFile $destino
 }
-"Listo. Elige esta carpeta en Chrome: $carpeta"
+$version = (Get-Content (Join-Path $carpeta 'manifest.json') -Raw | ConvertFrom-Json).version
+"Listo: Huella $version en $carpeta"
 ```
 
 Luego en Chrome abre `chrome://extensions`, activa **Modo de desarrollador**, toca **Cargar descomprimida** y elige la carpeta que indica el mensaje final. Para **actualizar**, pega el mismo comando otra vez y toca el botón de recargar de Huella en `chrome://extensions`.
+
+La tarjeta de Huella en `chrome://extensions` muestra la versión y la carpeta de donde Chrome la carga ("Cargada desde"). Deben coincidir con lo que dice el mensaje final del comando. Si Chrome la carga desde otra carpeta, cambia la primera línea del comando por esa carpeta, por ejemplo `$carpeta = 'C:\Users\tu-usuario\Downloads\Huella'`.
 
 ### Con GitHub Desktop
 

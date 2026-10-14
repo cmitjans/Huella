@@ -109,9 +109,6 @@ async function mostrar() {
     }
     cabecera.querySelector('#resumen').textContent = resumen;
 
-    if (!esPanel && tab) {
-      cabecera.append(el('button', { class: 'vivo-boton', type: 'button', onclick: () => abrirPanel(tab) }, 'Verlo en vivo al costado'));
-    }
 
     if (rastrean.length) lista.append(el('ol', {}, rastrean.map(tarjeta)));
 
@@ -127,6 +124,10 @@ async function mostrar() {
     }
   }
 
+  // El botón del panel va siempre, también en páginas que Huella no mira (el panel sigue a la pestaña que abras).
+  if (!esPanel && tab) {
+    cabecera.append(el('button', { class: 'vivo-boton', type: 'button', onclick: () => abrirPanel(tab) }, 'Verlo en vivo al costado'));
+  }
   if (esPanel) partes.push(registroEnVivo(pest));
   partes.push(el('footer', {},
     el('button', { class: 'principal', type: 'button', onclick: abrirMapa }, 'Ver el mapa completo'),
