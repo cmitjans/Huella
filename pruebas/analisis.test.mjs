@@ -174,3 +174,12 @@ test('quién es responsable de una llamada', async () => {
   assert.equal(elegirScript(['https://challenges.cloudflare.com/turnstile/v0/api.js'], 'ejemplo.cl').sitio, 'cloudflare.com');
   assert.equal(elegirScript([], 'ejemplo.cl'), null);
 });
+
+test('la lista de archivos del instalador está al día', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const { readFileSync } = await import('node:fs');
+  const raiz = new URL('..', import.meta.url).pathname;
+  const reales = execFileSync('git', ['ls-files', 'manifest.json', 'actualizar-huella.cmd', 'src', 'ui', 'iconos'], { cwd: raiz, encoding: 'utf8' }).trim().split('\n');
+  const lista = readFileSync(new URL('../herramientas/archivos.txt', import.meta.url), 'utf8').trim().split('\n');
+  assert.deepEqual(lista, reales, 'Ejecuta: git ls-files manifest.json actualizar-huella.cmd src ui iconos > herramientas/archivos.txt');
+});

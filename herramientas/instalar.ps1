@@ -12,15 +12,18 @@ $carpeta = $env:HUELLA_CARPETA
 if (-not $carpeta) { $carpeta = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'Huella' }
 $carpeta = $carpeta.TrimEnd('\', '/')
 
-$repo = 'https://api.github.com/repos/cmitjans/Huella'
-# Se usa el último cambio exacto, así no llegan copias viejas guardadas en caché.
-$sha = (Invoke-RestMethod "$repo/commits/main").sha
-$lista = Invoke-RestMethod "$repo/git/trees/$($sha)?recursive=1"
-foreach ($a in $lista.tree) {
-  if ($a.type -ne 'blob' -or $a.path -notmatch '^(manifest\.json|actualizar-huella\.cmd|src/|ui/|iconos/)') { continue }
-  $destino = Join-Path $carpeta $a.path
+$raw = 'https://raw.githubusercontent.com/cmitjans/Huella'
+# Se usa el último cambio exacto (así no llegan copias viejas guardadas en caché). Si no se puede
+# consultar a GitHub cuál es, se usa la rama principal y la lista de archivos del repositorio.
+$sha = $null
+try { $sha = (Invoke-RestMethod 'https://api.github.com/repos/cmitjans/Huella/commits/main').sha } catch { }
+$version = if ($sha) { $sha } else { 'main' }
+$lista = (New-Object Net.WebClient).DownloadString("$raw/$version/herramientas/archivos.txt") -split "`n" |
+  ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^(manifest\.json|actualizar-huella\.cmd|src/|ui/|iconos/)' }
+foreach ($ruta in $lista) {
+  $destino = Join-Path $carpeta $ruta
   New-Item -ItemType Directory -Force -Path (Split-Path $destino) | Out-Null
-  Invoke-WebRequest -UseBasicParsing "https://raw.githubusercontent.com/cmitjans/Huella/$sha/$($a.path)" -OutFile $destino
+  Invoke-WebRequest -UseBasicParsing "$raw/$version/$ruta" -OutFile $destino
 }
 
 # Ícono en el escritorio para la próxima vez: solo al instalar con el comando de PowerShell, no cuando
@@ -40,7 +43,7 @@ if ($env:OS -eq 'Windows_NT' -and -not $env:HUELLA_CARPETA) {
   } catch { }
 }
 
-$version = (Get-Content (Join-Path $carpeta 'manifest.json') -Raw | ConvertFrom-Json).version
+$numero = (Get-Content (Join-Path $carpeta 'manifest.json') -Raw | ConvertFrom-Json).version
 Write-Host ''
-Write-Host "Listo: Huella $version en $carpeta"
+Write-Host "Listo: Huella $numero en $carpeta"
 Write-Host 'Para aplicarla, toca el botón de recargar (la flecha circular) en la tarjeta de Huella en chrome://extensions.'
