@@ -1,0 +1,46 @@
+# Cada cambio en main prueba la extensión, la empaqueta y la publica en "Releases" como la versión más reciente.
+name: Publicar extensión
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Probar el análisis
+        run: node --test pruebas/*.test.mjs
+
+      - name: Empaquetar
+        run: |
+          VERSION="0.1.$(git rev-list --count HEAD)"
+          mkdir -p build/Huella
+          cp -r manifest.json src ui iconos build/Huella/
+          sed -i "s/\"version\": \"[0-9.]*\"/\"version\": \"$VERSION\"/" build/Huella/manifest.json
+          (cd build && zip -qr ../Huella.zip Huella)
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Publicar en Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTAS="Versión más reciente. Descarga Huella.zip, descomprímelo encima de la carpeta anterior y toca Recargar en chrome://extensions."
+          if gh release view ultima > /dev/null 2>&1; then
+            gh release upload ultima Huella.zip --clobber
+            gh release edit ultima --title "Huella $VERSION" --notes "$NOTAS"
+          else
+            gh release create ultima Huella.zip --title "Huella $VERSION" --notes "$NOTAS"
+          fi

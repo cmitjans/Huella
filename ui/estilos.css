@@ -1,0 +1,119 @@
+/* Huella — estilo compartido por la ventana emergente y el mapa.
+   Idea: un expediente de evidencia. Papel frío, tinta azul marino; lo que salió de tu
+   navegador se marca con resaltador amarillo y lo que las empresas se pasan entre ellas, en tinta roja. */
+
+:root {
+  --papel: #edf0f3;
+  --papel-2: #f7f8fa;
+  --tinta: #18213d;
+  --grafito: #5b6478;
+  --linea: #c9cfd8;
+  --marca: rgba(245, 224, 74, .62);
+  --marca-solida: #f5e04a;
+  --rojo: #c43b2e;
+  --foco: #2f6fdb;
+  --titulo: "Bahnschrift", "DIN Alternate", "DIN 2014", "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
+  --texto: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --codigo: "Cascadia Mono", Consolas, "SF Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --papel: #10162a;
+    --papel-2: #182040;
+    --tinta: #e6e9f0;
+    --grafito: #9aa3b8;
+    --linea: #2c3556;
+    --marca: rgba(245, 224, 74, .30);
+    --marca-solida: #f5e04a;
+    --rojo: #ff7a66;
+    --foco: #8fb4ff;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font: 15px/1.5 var(--texto);
+}
+
+h1, h2, h3 {
+  font-family: var(--titulo);
+  font-weight: 600;
+  letter-spacing: -.005em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+a { color: inherit; text-underline-offset: 3px; }
+
+button, select, input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 1.5px solid var(--tinta);
+  background: transparent;
+  border-radius: 6px;
+  padding: 6px 14px;
+}
+button.principal { background: var(--tinta); color: var(--papel); }
+button.texto { border: 0; padding: 2px 0; text-decoration: underline; text-underline-offset: 3px; }
+button:disabled { opacity: .5; cursor: default; }
+
+:focus-visible { outline: 2.5px solid var(--foco); outline-offset: 2px; }
+
+.apagado { color: var(--grafito); }
+.pequeno { font-size: 13px; }
+
+/* El valor que salió de tu navegador, marcado con resaltador. */
+mark, .marcado {
+  background: linear-gradient(transparent 12%, var(--marca) 12%, var(--marca) 88%, transparent 88%);
+  color: inherit;
+  padding: 0 .2em;
+  border-radius: 2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+code {
+  font-family: var(--codigo);
+  font-size: .88em;
+}
+
+/* Lo que recibió una empresa: etiquetas. Las que te identifican van resaltadas. */
+.datos { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 0; padding: 0; list-style: none; }
+.dato {
+  font-size: 12.5px;
+  line-height: 1.3;
+  padding: 1px 7px;
+  border: 1px solid var(--linea);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.dato.identifica {
+  border-color: transparent;
+  background: var(--marca);
+}
+
+.punto {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: 1px;
+  flex: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

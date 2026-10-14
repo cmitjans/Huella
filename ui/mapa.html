@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Huella: quién recibe tus datos</title>
+  <link rel="icon" href="../iconos/32.png">
+  <link rel="stylesheet" href="estilos.css">
+  <link rel="stylesheet" href="mapa.css">
+</head>
+<body>
+  <header class="barra">
+    <a class="marca" href="#mapa"><img src="../iconos/32.png" alt="" width="24" height="24">Huella</a>
+    <nav aria-label="Secciones">
+      <a href="#mapa" data-vista="mapa">Mapa</a>
+      <a href="#empresas" data-vista="empresas">Empresas</a>
+      <a href="#sitios" data-vista="sitios">Sitios</a>
+      <a href="#limites" data-vista="limites">Lo que no se ve</a>
+      <a href="#ajustes" data-vista="ajustes">Ajustes</a>
+    </nav>
+  </header>
+
+  <section id="bienvenida" class="aviso" hidden>
+    <h2>Huella ya está observando</h2>
+    <p>Navega como siempre. Cada página que abras irá sumando a este mapa: qué empresas recibieron datos tuyos, cuáles y con quién los compartieron.</p>
+    <p class="apagado">Solo observa: no bloquea ni cambia nada, y no se conecta a internet. Lo registrado queda guardado únicamente en este computador. Las pestañas de incógnito no se registran.</p>
+    <button type="button" id="cerrar-bienvenida">Entendido</button>
+  </section>
+
+  <p id="titular" class="titular"></p>
+
+  <div class="cuerpo">
+    <main id="vista">
+      <section data-seccion="mapa" hidden>
+        <div class="herramientas">
+          <label><input type="checkbox" id="incluir-otros"> Incluir servicios que no rastrean</label>
+          <div id="leyenda" class="leyenda"></div>
+        </div>
+        <div id="lienzo" class="lienzo"></div>
+        <p id="nota-mapa" class="apagado pequeno"></p>
+      </section>
+
+      <section data-seccion="empresas" hidden>
+        <div class="herramientas">
+          <input type="search" id="buscar-empresa" placeholder="Buscar empresa" aria-label="Buscar empresa">
+          <label><input type="checkbox" id="incluir-otros-lista"> Incluir servicios que no rastrean</label>
+        </div>
+        <ol id="lista-empresas" class="filas"></ol>
+      </section>
+
+      <section data-seccion="sitios" hidden>
+        <div class="herramientas">
+          <input type="search" id="buscar-sitio" placeholder="Buscar sitio" aria-label="Buscar sitio">
+        </div>
+        <ol id="lista-sitios" class="filas"></ol>
+      </section>
+
+      <section data-seccion="limites" class="texto-largo" hidden>
+        <h2>Lo que recibe cualquier servidor</h2>
+        <p>Cada vez que tu navegador le pide algo a un servidor, este recibe lo siguiente, aunque no lo use para rastrearte:</p>
+        <dl id="siempre" class="pares"></dl>
+
+        <h2>Lo que esta extensión no puede ver</h2>
+        <p>Huella ve lo que sale de tu navegador. No ve lo que pasa después:</p>
+        <ul>
+          <li><strong>Lo que hacen las empresas en sus servidores.</strong> Si venden tus datos, los cruzan con otras bases o se los pasan a socios, eso ocurre fuera de tu computador.</li>
+          <li><strong>Envíos de servidor a servidor.</strong> Un sitio puede mandar tus datos directo a una empresa sin pasar por tu navegador (por ejemplo, la API de conversiones de Meta o el etiquetado en servidor de Google).</li>
+          <li><strong>Lo que saben en sus propios servicios.</strong> Lo que Google sabe por tu cuenta de Google, o Meta por Instagram y WhatsApp.</li>
+          <li><strong>Las apps del teléfono.</strong> Para eso está Rastreadores, en Android.</li>
+          <li><strong>Envíos cifrados o comprimidos.</strong> Se anota a quién llegaron, pero no siempre qué llevaban.</li>
+          <li><strong>Las pestañas de incógnito,</strong> salvo que actives la extensión ahí en chrome://extensions.</li>
+        </ul>
+        <p>Lo que sí aparece en el mapa como "compartido" son pruebas observadas en tu navegador: identificadores que viajaron de una empresa a otra, sincronizaciones de cookies y llamadas desde los espacios publicitarios.</p>
+
+        <h2>Cómo averiguar el resto</h2>
+        <ul>
+          <li><strong>Pídele tus datos a cada empresa.</strong> En Chile, la Ley 21.719 de protección de datos personales rige desde el 1 de diciembre de 2026 y te da derecho a pedir acceso a lo que tienen de ti. Las empresas europeas y muchas estadounidenses ya responden estas solicitudes; la política de privacidad de cada una dice cómo.</li>
+          <li><strong>Meta</strong> muestra qué sitios y apps le enviaron tu actividad en el Centro de cuentas, en "Tu actividad fuera de las tecnologías de Meta".</li>
+          <li><strong>Google</strong> muestra los temas que usa para tus anuncios en "Mi Centro de anuncios" (myadcenter.google.com), y puedes descargar tus datos en Google Takeout.</li>
+        </ul>
+
+        <h2>De dónde sale la lista de empresas</h2>
+        <p id="fuente-lista"></p>
+      </section>
+
+      <section data-seccion="ajustes" class="texto-largo" hidden>
+        <h2>Registro</h2>
+        <p id="estado-registro"></p>
+        <button type="button" id="alternar-pausa"></button>
+
+        <h2>Cuánto tiempo guardar</h2>
+        <p>Lo registrado incluye qué sitios visitaste. Se borra solo cuando pasa este plazo.</p>
+        <label>Guardar lo de los últimos
+          <select id="dias">
+            <option value="7">7 días</option>
+            <option value="30">30 días</option>
+            <option value="90">90 días</option>
+            <option value="365">un año</option>
+            <option value="0">sin límite</option>
+          </select>
+        </label>
+
+        <h2>Tus registros</h2>
+        <p>Puedes descargarlos como archivo JSON (se guarda en tu computador, no se envía a ningún lado) o borrarlos.</p>
+        <p class="botones">
+          <button type="button" id="exportar">Descargar mis registros</button>
+          <button type="button" id="borrar">Borrar todo lo registrado</button>
+        </p>
+        <p id="confirmacion" class="apagado" role="status"></p>
+
+        <h2>Privacidad de Huella</h2>
+        <p>Huella no se conecta a internet: su política de seguridad le prohíbe abrir conexiones. Solo observa las peticiones que ya hacen las páginas, sin bloquearlas ni cambiarlas. Los valores que te identifican se guardan recortados, y los identificadores que compara entre empresas se guardan como un resumen que no permite recuperarlos.</p>
+      </section>
+    </main>
+
+    <aside id="detalle" class="detalle" hidden aria-live="polite"></aside>
+  </div>
+
+  <script type="module" src="mapa.js"></script>
+</body>
+</html>

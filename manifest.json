@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Huella",
+  "version": "0.1.0",
+  "description": "Muestra qué datos tuyos reciben empresas terceras mientras navegas y con quién los comparten. Solo observa; todo queda en tu computador.",
+  "minimum_chrome_version": "111",
+  "permissions": ["webRequest", "storage", "cookies"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "background": {
+    "service_worker": "src/fondo.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Huella: quién recibe tus datos en esta página",
+    "default_popup": "ui/ventana.html",
+    "default_icon": {
+      "16": "iconos/16.png",
+      "32": "iconos/32.png",
+      "48": "iconos/48.png"
+    }
+  },
+  "icons": {
+    "16": "iconos/16.png",
+    "32": "iconos/32.png",
+    "48": "iconos/48.png",
+    "128": "iconos/128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["src/pagina-huella.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["src/puente.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'none'"
+  }
+}
