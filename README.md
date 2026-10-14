@@ -6,7 +6,29 @@ Su único fin es que veas lo que otros recolectan sobre ti. **Solo observa**: no
 
 ## Instalar
 
-El repositorio es la extensión tal cual: se carga directo desde una copia en tu computador, sin descargar ni descomprimir nada.
+El repositorio es la extensión tal cual: se carga directo desde una copia en tu computador, sin descomprimir nada.
+
+### Con PowerShell (no hay que instalar nada)
+
+Abre **PowerShell** desde el menú Inicio, pega esto y presiona Enter. Baja los archivos de la extensión uno por uno desde GitHub y los deja en la carpeta `Documentos\Huella`:
+
+```powershell
+$carpeta = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'Huella'
+$ProgressPreference = 'SilentlyContinue'
+[Net.ServicePointManager]::SecurityProtocol = 'Tls12'
+$lista = Invoke-RestMethod 'https://api.github.com/repos/cmitjans/Huella/git/trees/main?recursive=1'
+foreach ($a in $lista.tree) {
+  if ($a.type -ne 'blob' -or $a.path -notmatch '^(manifest\.json|src/|ui/|iconos/)') { continue }
+  $destino = Join-Path $carpeta $a.path
+  New-Item -ItemType Directory -Force -Path (Split-Path $destino) | Out-Null
+  Invoke-WebRequest -UseBasicParsing "https://raw.githubusercontent.com/cmitjans/Huella/main/$($a.path)" -OutFile $destino
+}
+"Listo. Elige esta carpeta en Chrome: $carpeta"
+```
+
+Luego en Chrome abre `chrome://extensions`, activa **Modo de desarrollador**, toca **Cargar extensión sin empaquetar** y elige la carpeta que indica el mensaje final. Para **actualizar**, pega el mismo comando otra vez y toca el botón de recargar de Huella en `chrome://extensions`.
+
+### Con GitHub Desktop
 
 1. Copia el repositorio a tu computador. La forma más simple es con [GitHub Desktop](https://desktop.github.com): **File → Clone repository**, elige `cmitjans/Huella` y una carpeta fija (por ejemplo, Documentos). Si usas la terminal: `git clone https://github.com/cmitjans/Huella.git`.
 2. En Chrome abre `chrome://extensions`, activa **Modo de desarrollador** (arriba a la derecha) y toca **Cargar extensión sin empaquetar**. Elige la carpeta `Huella` que se creó.
