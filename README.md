@@ -6,12 +6,13 @@ Su único fin es que veas lo que otros recolectan sobre ti. **Solo observa**: no
 
 ## Instalar
 
-1. Descarga **Huella.zip** desde [Releases](https://github.com/cmitjans/Huella/releases/latest).
-2. Descomprímelo. Queda una carpeta llamada `Huella`; déjala en un lugar fijo (por ejemplo, Documentos).
-3. En Chrome abre `chrome://extensions`, activa **Modo de desarrollador** (arriba a la derecha) y toca **Cargar extensión sin empaquetar**. Elige la carpeta `Huella`.
-4. Toca el ícono de la pieza de rompecabezas en la barra de Chrome y fija Huella con el alfiler.
+El repositorio es la extensión tal cual: se carga directo desde una copia en tu computador, sin descargar ni descomprimir nada.
 
-Para **actualizar**, descarga el zip nuevo, descomprímelo encima de la misma carpeta y toca el botón de recargar de Huella en `chrome://extensions`. Lo registrado se conserva.
+1. Copia el repositorio a tu computador. La forma más simple es con [GitHub Desktop](https://desktop.github.com): **File → Clone repository**, elige `cmitjans/Huella` y una carpeta fija (por ejemplo, Documentos). Si usas la terminal: `git clone https://github.com/cmitjans/Huella.git`.
+2. En Chrome abre `chrome://extensions`, activa **Modo de desarrollador** (arriba a la derecha) y toca **Cargar extensión sin empaquetar**. Elige la carpeta `Huella` que se creó.
+3. Toca el ícono de la pieza de rompecabezas en la barra de Chrome y fija Huella con el alfiler.
+
+Para **actualizar**: en GitHub Desktop toca **Fetch origin** y luego **Pull origin** (o `git pull` en la terminal), y después el botón de recargar de Huella en `chrome://extensions`. Lo registrado se conserva mientras uses siempre la misma carpeta.
 
 Chrome puede avisar al iniciar que tienes extensiones en modo de desarrollador: es normal para extensiones instaladas así.
 

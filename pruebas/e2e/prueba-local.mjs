@@ -14,7 +14,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 
-const EXTENSION = resolve(new URL('../..', import.meta.url).pathname);
+// EXTENSION=<carpeta> permite probar otra copia, por ejemplo una recién clonada.
+const EXTENSION = resolve(process.env.EXTENSION || new URL('../..', import.meta.url).pathname);
 const CAPTURAS = process.env.CAPTURAS || join(tmpdir(), 'huella-capturas');
 mkdirSync(CAPTURAS, { recursive: true });
 const tmp = mkdtempSync(join(tmpdir(), 'huella-prueba-'));
