@@ -147,6 +147,7 @@ svg.enfoque .nodo.activo text { font-weight: 700; }
 .recibido { margin: 10px 0 0; padding: 0; list-style: none; }
 .recibido > li { margin: 0 0 14px; }
 .recibido .que { font-weight: 600; }
+.recibido .que.rojo { color: var(--rojo); }
 .recibido .cuanto { color: var(--grafito); font-size: 13px; }
 .recibido .explica { color: var(--grafito); font-size: 13px; margin: 2px 0 4px; }
 .muestra { font-size: 13px; margin: 6px 0; overflow-wrap: anywhere; }

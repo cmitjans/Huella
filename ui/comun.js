@@ -3,7 +3,10 @@ import { TIPOS, DATOS, ORDEN_DATOS } from '../src/categorias.js';
 import { empresaDe } from '../src/empresas.js';
 
 /** Datos que te identifican directamente: se marcan con resaltador. */
-export const IDENTIFICAN = new Set(['contacto', 'cookie', 'identificador', 'huella', 'grabacion']);
+export const IDENTIFICAN = new Set(['escritura', 'comportamiento', 'contacto', 'cookie', 'identificador', 'huella', 'grabacion']);
+
+/** Lo que los scripts observan dentro de la página (se muestra aparte de las etiquetas). */
+export const OBSERVADO = new Set(['escritura', 'comportamiento', 'atencion']);
 
 /** Crea un elemento: el('p', {class: 'x'}, 'texto', otroElemento). */
 export function el(etiqueta, attrs = {}, ...hijos) {
@@ -23,10 +26,10 @@ export function el(etiqueta, attrs = {}, ...hijos) {
 }
 
 /** Etiquetas de los datos recibidos, en orden de importancia. */
-export function etiquetasDatos(datos, conCantidad = false) {
+export function etiquetasDatos(datos, conCantidad = false, excluir = null) {
   const ul = el('ul', { class: 'datos' });
   for (const cat of ORDEN_DATOS) {
-    if (!datos[cat]) continue;
+    if (!datos[cat] || excluir?.has(cat)) continue;
     ul.append(el('li', { class: 'dato' + (IDENTIFICAN.has(cat) ? ' identifica' : ''), title: DATOS[cat].nombre },
       DATOS[cat].corto, conCantidad ? ` ${datos[cat]}` : ''));
   }
@@ -38,6 +41,18 @@ export function puntoTipo(tipo) {
 }
 
 export const plural = (n, uno, varios) => `${n.toLocaleString('es-CL')} ${n === 1 ? uno : varios}`;
+
+export function peso(bytes) {
+  if (bytes >= 1048576) return `${(bytes / 1048576).toLocaleString('es-CL', { maximumFractionDigits: 1 })} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024).toLocaleString('es-CL')} KB`;
+  return `${bytes} bytes`;
+}
+
+/** Une una lista en español: ['a','b','c'] → 'a, b y c'. */
+export function unir(lista) {
+  if (lista.length <= 1) return lista.join('');
+  return lista.slice(0, -1).join(', ') + ' y ' + lista[lista.length - 1];
+}
 
 export function fecha(ts) {
   return new Date(ts).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' });
@@ -75,10 +90,16 @@ export function construirModelo(todo) {
         clave, nombre: clave, conocida: !!info, politica: info?.politica || '', huellaDDG: 0,
         dominios: [], sitios: new Map(), datos: {}, ej: {}, cookies: {}, duracion: {}, tecnicas: {},
         disfrazado: false, peticionesPorTipo: {}, salida: [], entrada: [], n: 0,
+        obs: {}, obsSitios: {}, bytes: 0, tiempoMs: 0, scrollMax: 0,
       };
       empresas.set(clave, emp);
     }
     const tipo = info ? info.categoria : 'desconocida';
+    for (const [q, n] of Object.entries(t.obs || {})) emp.obs[q] = (emp.obs[q] || 0) + n;
+    for (const [q, l] of Object.entries(t.obsSitios || {})) emp.obsSitios[q] = [...new Set([...(emp.obsSitios[q] || []), ...l])];
+    emp.bytes += t.bytes || 0;
+    emp.tiempoMs += t.tiempoMs || 0;
+    emp.scrollMax = Math.max(emp.scrollMax, t.scrollMax || 0);
     emp.dominios.push({ s: t.s, n: t.n, tipo, hosts: t.hosts });
     emp.peticionesPorTipo[tipo] = (emp.peticionesPorTipo[tipo] || 0) + t.n;
     emp.huellaDDG = Math.max(emp.huellaDDG, info?.huella || 0);
@@ -144,6 +165,7 @@ function crearEmpresaSuelta(dominio, empresas, porDominio) {
       clave, nombre: clave, conocida: !!info, politica: info?.politica || '', huellaDDG: info?.huella || 0,
       dominios: [{ s: dominio, n: 0, tipo: info ? info.categoria : 'desconocida' }], sitios: new Map(), datos: {}, ej: {},
       cookies: {}, duracion: {}, tecnicas: {}, disfrazado: false, peticionesPorTipo: {}, salida: [], entrada: [], n: 0,
+      obs: {}, obsSitios: {}, bytes: 0, tiempoMs: 0, scrollMax: 0,
       tipo: info ? info.categoria : 'desconocida', soloEnlace: true,
     };
     emp.tipos = [emp.tipo];
@@ -159,9 +181,13 @@ export function empresasDePestana(pestana) {
   const out = new Map();
   for (const [tercero, t] of Object.entries(pestana?.terc || {})) {
     const clave = t.empresa || tercero;
-    const e = out.get(clave) || { nombre: clave, tipo: t.tipo, datos: {}, dominios: [], n: 0, porTipo: {} };
+    const e = out.get(clave) || { nombre: clave, tipo: t.tipo, datos: {}, dominios: [], n: 0, porTipo: {}, obs: {}, bytes: 0, tiempoMs: 0, scroll: 0 };
     e.dominios.push(tercero);
     e.n += t.n;
+    e.bytes += t.bytes || 0;
+    e.tiempoMs += t.tiempoMs || 0;
+    e.scroll = Math.max(e.scroll, t.scroll || 0);
+    for (const [q, n] of Object.entries(t.obs || {})) e.obs[q] = (e.obs[q] || 0) + n;
     e.porTipo[t.tipo] = (e.porTipo[t.tipo] || 0) + t.n;
     for (const [c, n] of Object.entries(t.d)) e.datos[c] = (e.datos[c] || 0) + n;
     out.set(clave, e);
@@ -176,6 +202,7 @@ export function empresasDePestana(pestana) {
 }
 
 export function ordenarPorImportancia(lista) {
-  const peso = e => [...IDENTIFICAN].filter(c => e.datos[c]).length * 10 + Object.keys(e.datos).length;
-  return lista.sort((a, b) => peso(b) - peso(a) || b.n - a.n);
+  const valor = e => (e.datos.escritura ? 100 : 0) + (e.datos.comportamiento ? 50 : 0) +
+    [...IDENTIFICAN].filter(c => e.datos[c]).length * 10 + Object.keys(e.datos).length;
+  return lista.sort((a, b) => valor(b) - valor(a) || b.n - a.n);
 }

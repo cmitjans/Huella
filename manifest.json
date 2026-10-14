@@ -3,9 +3,17 @@
   "name": "Huella",
   "version": "0.1.0",
   "description": "Muestra qué datos tuyos reciben empresas terceras mientras navegas y con quién los comparten. Solo observa; todo queda en tu computador.",
-  "minimum_chrome_version": "111",
-  "permissions": ["webRequest", "storage", "cookies"],
-  "host_permissions": ["http://*/*", "https://*/*"],
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "webRequest",
+    "storage",
+    "cookies",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
   "background": {
     "service_worker": "src/fondo.js",
     "type": "module"
@@ -19,6 +27,9 @@
       "48": "iconos/48.png"
     }
   },
+  "side_panel": {
+    "default_path": "ui/panel.html"
+  },
   "icons": {
     "16": "iconos/16.png",
     "32": "iconos/32.png",
@@ -27,16 +38,26 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["src/pagina-huella.js"],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "src/pagina-huella.js"
+      ],
       "run_at": "document_start",
       "all_frames": true,
       "match_about_blank": true,
       "world": "MAIN"
     },
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["src/puente.js"],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "src/puente.js"
+      ],
       "run_at": "document_start",
       "all_frames": true,
       "match_about_blank": true

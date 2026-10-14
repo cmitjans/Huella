@@ -4,8 +4,8 @@
 // su política de seguridad (manifest.json) le prohíbe abrir conexiones.
 
 import { analizarPeticion, sitioDe, hostDe, esWeb, resumen, llevaIdentificador, duracionCookie, idsDeCookie, leerCookies } from './analisis.js';
-import { empresaDe } from './empresas.js';
-import { TIPOS } from './categorias.js';
+import { empresaDe, elegirScript } from './empresas.js';
+import { TIPOS, OBSERVA, CAMPOS, DATOS, TECNICAS } from './categorias.js';
 import * as registro from './registro.js';
 
 const FILTRO = { urls: ['http://*/*', 'https://*/*'] };
@@ -35,7 +35,7 @@ const listo = Promise.all([
 // ------------------------------------------------------------ pestañas
 
 function nuevaPestana(tabId, url) {
-  const p = { url, sitio: sitioDe(url), inicio: Date.now(), terc: {}, propia: {} };
+  const p = { url, sitio: sitioDe(url), inicio: Date.now(), terc: {}, propia: {}, vistos: {}, ult: [] };
   pestanas.set(tabId, p);
   marcarPestana(tabId);
   return p;
@@ -47,22 +47,55 @@ async function paginaDe(tabId, iniciador) {
     if (p) return p;
     try {
       const tab = await chrome.tabs.get(tabId);
-      if (esWeb(tab.url)) return pestanas.get(tabId) || nuevaPestana(tabId, tab.url);
+      if (!esWeb(tab.url)) return null;
+      if (pestanas.has(tabId)) return pestanas.get(tabId);
+      // Chrome apaga el servicio de fondo cuando está inactivo; al volver se recupera lo anotado en la pestaña.
+      const guardada = (await chrome.storage.session.get('tab:' + tabId).catch(() => ({})))['tab:' + tabId];
+      if (pestanas.has(tabId)) return pestanas.get(tabId);
+      if (guardada && guardada.sitio === sitioDe(tab.url)) {
+        const q = { vistos: {}, ult: [], propia: {}, terc: {}, ...guardada };
+        pestanas.set(tabId, q);
+        return q;
+      }
+      return nuevaPestana(tabId, tab.url);
     } catch { /* la pestaña ya no existe */ }
   }
   // Sin pestaña (por ejemplo, el service worker de un sitio): se usa el sitio que hizo la petición.
-  if (esWeb(iniciador)) return { url: iniciador, sitio: sitioDe(iniciador), sinPestana: true, terc: {}, propia: {} };
+  if (esWeb(iniciador)) return { url: iniciador, sitio: sitioDe(iniciador), sinPestana: true, terc: {}, propia: {}, vistos: {}, ult: [] };
   return null;
 }
 
-function anotarEnPestana(pag, tabId, tercero, empresa, categorias) {
+/**
+ * Anota en la pestaña lo que recibió u observó un tercero.
+ * extra: { bytes, tiempoMs, scrollPct, obs: 'mouse'|'lectura:correo'…, evento: texto para el registro en vivo }
+ */
+function anotarEnPestana(pag, tabId, tercero, empresa, categorias, extra = {}) {
   if (pag.sinPestana) return;
+  const ahora = Date.now();
   const t = pag.terc[tercero] || (pag.terc[tercero] = {
     n: 0, d: {}, empresa: empresa ? empresa.nombre : '', tipo: empresa ? empresa.categoria : 'desconocida',
+    bytes: 0, tiempoMs: 0, scroll: 0, obs: {}, primero: ahora, ultimo: ahora,
   });
-  t.n++;
+  if (!extra.obs && !extra.observacion) { t.n++; t.ultimo = ahora; }
   for (const c of categorias) t.d[c] = (t.d[c] || 0) + 1;
+  t.bytes = (t.bytes || 0) + (extra.bytes || 0);
+  t.tiempoMs = (t.tiempoMs || 0) + (extra.tiempoMs || 0);
+  if (extra.scrollPct) t.scroll = Math.max(t.scroll || 0, extra.scrollPct);
+  if (extra.obs) { t.obs = t.obs || {}; t.obs[extra.obs] = (t.obs[extra.obs] || 0) + 1; }
+  if (extra.evento) {
+    pag.ult = pag.ult || [];
+    pag.ult.unshift({ t: ahora, s: tercero, e: t.empresa || tercero, q: extra.evento, fuerte: !!extra.fuerte });
+    if (pag.ult.length > 30) pag.ult.length = 30;
+  }
   marcarPestana(tabId);
+}
+
+/** Texto corto para el registro en vivo: qué recibió una empresa en un envío. */
+function describirEnvio(datos, bytes) {
+  const orden = ['escritura', 'contacto', 'grabacion', 'huella', 'cookie', 'identificador', 'atencion', 'pagina', 'busqueda', 'acciones', 'origen', 'titulo', 'ubicacion', 'dispositivo'];
+  const que = orden.filter(c => datos[c]).map(c => DATOS[c].corto.toLowerCase());
+  const peso = bytes >= 1024 ? `${Math.round(bytes / 1024)} KB` : `${bytes} bytes`;
+  return que.length ? `recibió ${que.slice(0, 3).join(', ')} (${peso})` : `recibió una petición (${peso})`;
 }
 
 function marcarPestana(tabId) {
@@ -171,8 +204,12 @@ chrome.webRequest.onBeforeRequest.addListener(det => {
     return;
   }
   if (pendientes.size > 3000) pendientes.delete(pendientes.keys().next().value);
+  let tam = det.url.length;
+  for (const r of det.requestBody?.raw || []) tam += r.bytes ? r.bytes.byteLength : 0;
+  if (det.requestBody?.formData) tam += JSON.stringify(det.requestBody.formData).length;
   pendientes.set(det.requestId, {
     url: det.url,
+    tam,
     cuerpo: cuerpoDe(det.requestBody),
     pagina: paginaDe(det.tabId, det.initiator),
   });
@@ -199,8 +236,15 @@ chrome.webRequest.onSendHeaders.addListener(async det => {
   if (empresa?.categoria === 'grabacion') {
     r.datos.grabacion = [{ campo: host, valor: host, nota: 'Servicio de grabación de sesión' }];
   }
-  registro.envio({ sitioPagina: pag.sitio, tercero: clave, host, datos: r.datos, cookies: r.cookies, disfrazado });
-  anotarEnPestana(pag, det.tabId, clave, empresa, Object.keys(r.datos));
+  registro.envio({
+    sitioPagina: pag.sitio, tercero: clave, host, datos: r.datos, cookies: r.cookies, disfrazado,
+    bytes: pend.tam, tiempoMs: r.tiempoMs, scrollPct: r.scrollPct,
+  });
+  const rastrea = TIPOS[empresa?.categoria]?.rastrea || ['cookie', 'identificador', 'contacto', 'grabacion'].some(c => r.datos[c]);
+  anotarEnPestana(pag, det.tabId, clave, empresa, Object.keys(r.datos), {
+    bytes: pend.tam, tiempoMs: r.tiempoMs, scrollPct: r.scrollPct,
+    evento: rastrea ? describirEnvio(r.datos, pend.tam) : '',
+  });
 
   const quien = empresa ? empresa.nombre : clave;
   seguirIds(r.ids, clave, quien, pag.sitio, det.url, cadenas.get(det.requestId));
@@ -261,6 +305,7 @@ chrome.webRequest.onErrorOccurred.addListener(terminar, FILTRO);
 
 // ------------------------------------------------------------ mensajes
 
+
 chrome.runtime.onMessage.addListener((msg, sender, responder) => {
   if (msg?.tipo === 'huella') {
     if (!sender.tab || registro.leerAjustes().pausa) return;
@@ -268,15 +313,39 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
       await listo;
       const pag = await paginaDe(sender.tab.id, sender.tab.url);
       if (!pag) return;
-      const script = String(msg.script || '').slice(0, 500);
-      const sitioScript = esWeb(script) ? sitioDe(script) : pag.sitio;
-      const tecnica = String(msg.tecnica || '').slice(0, 20);
+      const scripts = (Array.isArray(msg.scripts) ? msg.scripts : [msg.script]).map(x => String(x || '').slice(0, 500)).slice(0, 8);
+      const elegido = elegirScript(scripts, pag.sitio);
+      const script = elegido ? elegido.url : pag.url;
+      const empresa = elegido?.empresa || null;
+      let sitioScript = elegido ? elegido.sitio : pag.sitio;
+      if (empresa?.disfrazado) sitioScript = sitioDe(empresa.dominio);
+      const tecnica = String(msg.tecnica || '');
+      const extra = String(msg.extra || '');
+
+      if (tecnica === 'escucha' || tecnica === 'lectura') {
+        // Que el propio sitio escuche o lea sus formularios es normal: solo cuentan los terceros.
+        if (sitioScript === pag.sitio) return;
+        if (tecnica === 'escucha' && !OBSERVA[extra]) return;
+        if (tecnica === 'lectura' && !CAMPOS[extra]) return;
+        const que = tecnica === 'lectura' ? 'lectura:' + extra : extra;
+        pag.vistos = pag.vistos || {};
+        if (pag.vistos[sitioScript + '|' + que]) return;   // una vez por página
+        pag.vistos[sitioScript + '|' + que] = 1;
+        registro.observa(pag.sitio, sitioScript, que, script);
+        const evento = tecnica === 'lectura'
+          ? `leyó lo que escribiste en ${CAMPOS[extra]}`
+          : `escucha: ${OBSERVA[extra].nombre.toLowerCase()}`;
+        anotarEnPestana(pag, sender.tab.id, sitioScript, empresa, [tecnica === 'lectura' ? 'escritura' : 'comportamiento'],
+          { obs: que, evento, fuerte: tecnica === 'lectura' || extra === 'teclas' });
+        return;
+      }
+
       registro.huella(pag.sitio, sitioScript, tecnica, script);
       if (sitioScript === pag.sitio) {
         pag.propia[tecnica] = (pag.propia[tecnica] || 0) + 1;
         marcarPestana(sender.tab.id);
       } else {
-        anotarEnPestana(pag, sender.tab.id, sitioScript, empresaDe(hostDe(script)), ['huella']);
+        anotarEnPestana(pag, sender.tab.id, sitioScript, empresa, ['huella'], { evento: `midió tu equipo (${(TECNICAS[tecnica]?.nombre || tecnica).toLowerCase()}) para sacar su huella digital`, observacion: true, fuerte: true });
       }
     })();
     return;

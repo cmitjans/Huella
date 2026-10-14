@@ -4,42 +4,9 @@
   <meta charset="utf-8">
   <title>Huella</title>
   <link rel="stylesheet" href="estilos.css">
-  <style>
-    body { width: 380px; min-height: 200px; }
-    header { padding: 16px 18px 12px; border-bottom: 1px solid var(--linea); }
-    #sitio { font-size: 22px; overflow-wrap: anywhere; }
-    #resumen { margin: 6px 0 0; font-size: 14.5px; }
-    #pausa { margin: 10px 18px 0; padding: 8px 10px; border: 1.5px dashed var(--grafito); border-radius: 6px; font-size: 13.5px; display: flex; gap: 8px; align-items: center; justify-content: space-between; }
-    main { padding: 4px 18px 6px; max-height: 390px; overflow-y: auto; }
-    ol { list-style: none; margin: 0; padding: 0; }
-    .empresa { padding: 10px 0; border-bottom: 1px solid var(--linea); }
-    .empresa:last-child { border-bottom: 0; }
-    .nombre { display: flex; align-items: baseline; gap: 4px; justify-content: space-between; }
-    .nombre strong { font-family: var(--titulo); font-weight: 600; font-size: 16px; }
-    .nombre span.tipo { font-size: 12.5px; color: var(--grafito); white-space: nowrap; }
-    .empresa .datos { margin-top: 5px; }
-    details { margin: 8px 0 4px; font-size: 13.5px; }
-    summary { cursor: pointer; color: var(--grafito); }
-    details li { padding: 2px 0; }
-    .propia { margin: 10px 0 4px; padding: 8px 10px; background: var(--papel-2); border-radius: 6px; font-size: 13.5px; }
-    footer { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 12px 18px 16px; border-top: 1px solid var(--linea); }
-    footer p { margin: 0; font-size: 12px; color: var(--grafito); }
-  </style>
+  <link rel="stylesheet" href="ventana.css">
 </head>
-<body>
-  <header>
-    <h1 id="sitio">Esta página</h1>
-    <p id="resumen" class="apagado">Cargando…</p>
-  </header>
-  <div id="pausa" hidden>
-    <span>El registro está en pausa: no se anota nada nuevo.</span>
-    <button id="reanudar" type="button">Reanudar</button>
-  </div>
-  <main id="lista"></main>
-  <footer>
-    <button id="abrir-mapa" class="principal" type="button">Ver el mapa completo</button>
-    <p>Solo observa. Todo queda en este computador.</p>
-  </footer>
+<body class="ventana">
   <script type="module" src="ventana.js"></script>
 </body>
 </html>

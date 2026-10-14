@@ -3,6 +3,8 @@
 // nombres y categorías se entiendan mejor y para cubrir empresas que esa lista no tiene.
 
 import ddg from './datos/rastreadores.js';
+import { TIPOS } from './categorias.js';
+import { sitioDe, hostDe, esWeb } from './analisis.js';
 
 /** Nombres más reconocibles para algunas empresas de la lista de DuckDuckGo. */
 const RENOMBRAR = {
@@ -158,3 +160,22 @@ export function empresaDe(host, ruta = '') {
 }
 
 export const FECHA_LISTA = ddg.fecha;
+
+/**
+ * Entre los scripts de la pila de llamadas, cuál es el responsable:
+ * el primero que sea de una empresa de rastreo; si no hay, el más externo que no sea una biblioteca
+ * de infraestructura (por ejemplo jQuery desde un CDN), porque es el que inició la llamada.
+ */
+export function elegirScript(scripts, sitioPagina) {
+  const info = scripts.filter(esWeb).map(url => {
+    let ruta = '';
+    try { ruta = new URL(url).pathname; } catch { /* nada */ }
+    return { url, sitio: sitioDe(url), empresa: empresaDe(hostDe(url), ruta) };
+  });
+  if (!info.length) return null;
+  const rastreador = info.find(x => x.sitio !== sitioPagina && x.empresa && TIPOS[x.empresa.categoria]?.rastrea);
+  if (rastreador) return rastreador;
+  const utiles = info.filter(x => !['infraestructura'].includes(x.empresa?.categoria));
+  const lista = utiles.length ? utiles : info;
+  return lista[lista.length - 1];
+}

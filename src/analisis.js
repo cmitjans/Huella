@@ -125,6 +125,11 @@ const CONOCIDOS = {
   _fbp: ['identificador', 'Identificador de Meta para tu navegador'],
   fbc: ['identificador', 'Identificador de un clic tuyo en un anuncio de Meta'],
   rl: ['origen', 'Página de la que venías'],
+  // Tiempo activo y desplazamiento (Google Analytics 4 y otros)
+  _et: ['atencion', 'Tiempo activo en la página desde el envío anterior'],
+  engagement_time_msec: ['atencion', 'Tiempo activo en la página'],
+  'epn.percent_scrolled': ['atencion', 'Hasta dónde bajaste en la página'],
+  percent_scrolled: ['atencion', 'Hasta dónde bajaste en la página'],
   // Clics en anuncios
   gclid: ['identificador', 'Identificador de un clic tuyo en un anuncio de Google'],
   gbraid: ['identificador', 'Identificador de un clic tuyo en un anuncio de Google'],
@@ -154,6 +159,8 @@ const P_BUSQUEDA = new Set(['q', 'query', 'search', 'searchterm', 'searchquery',
 const P_ACCIONES = new Set(['event', 'events', 'eventname', 'evt', 'action', 'conversion', 'purchase', 'revenue', 'currency',
   'transaction', 'order', 'orderid', 'cart', 'product', 'products', 'items', 'contentids', 'contents', 'ep', 'epn', 'cd',
   'value', 'checkout', 'click', 'clicks', 'scroll', 'pageview']);
+const P_ATENCION = new Set(['engagement', 'dwell', 'timeonpage', 'timeonsite', 'timespent', 'activetime', 'visibletime',
+  'scrolldepth', 'scrolled', 'attention', 'heartbeat']);
 const P_DISPOSITIVO = new Set(['screen', 'resolution', 'viewport', 'sw', 'sh', 'vw', 'vh', 'dpr', 'pixelratio', 'colordepth',
   'lang', 'language', 'locale', 'tz', 'timezone', 'tzo', 'ua', 'useragent', 'platform', 'os', 'osv', 'browser', 'device',
   'devicetype', 'model', 'make', 'hw', 'cpu', 'memory', 'mem', 'connection', 'conn', 'battery', 'plugins', 'fonts',
@@ -182,8 +189,10 @@ export function clasificarCampo(nombre, valor, ctx = {}) {
     return null;
   }
 
-  if (CONOCIDOS[c] || CONOCIDOS[String(nombre).toLowerCase()]) {
-    const [categoria, nota] = CONOCIDOS[String(nombre).toLowerCase()] || CONOCIDOS[c];
+  const ultimoTramo = String(nombre).toLowerCase().split('.').pop();
+  const conocido = CONOCIDOS[String(nombre).toLowerCase()] || CONOCIDOS[c] || (ultimoTramo.startsWith('_') ? null : CONOCIDOS[ultimoTramo]);
+  if (conocido) {
+    const [categoria, nota] = conocido;
     return { categoria, nota };
   }
 
@@ -221,6 +230,7 @@ export function clasificarCampo(nombre, valor, ctx = {}) {
     if (nombreDeId) return { categoria: 'identificador', nota: 'Identificador' };
   }
 
+  if (pal.some(p => P_ATENCION.has(p)) || P_ATENCION.has(c)) return { categoria: 'atencion', nota: 'Tiempo o desplazamiento en la página' };
   if (pal.some(p => P_ACCIONES.has(p))) return { categoria: 'acciones', nota: 'Detalle de lo que hiciste' };
   if (pal.some(p => P_DISPOSITIVO.has(p))) return { categoria: 'dispositivo', nota: 'Dato de tu equipo' };
   return null;
@@ -232,10 +242,42 @@ function comoUrl(v) {
   try { return new URL(s.startsWith('//') ? 'https:' + s : s); } catch { return null; }
 }
 
+/** Milisegundos de tiempo activo que informa un campo, o 0. */
+export function milisegundos(nombre, valor) {
+  const n = String(nombre).toLowerCase();
+  const ultimo = n.split('.').pop();
+  if (n !== '_et' && !/msec|_ms$|millis/.test(ultimo)) return 0;
+  const x = Number(valor);
+  return Number.isFinite(x) && x > 0 && x < 86400000 ? x : 0;
+}
+
+/** Porcentaje de la página recorrido que informa un campo, o 0. */
+export function porcentajeScroll(nombre, valor) {
+  if (!/percent_?scroll|scroll_?(depth|percent)/i.test(String(nombre))) return 0;
+  const x = Number(String(valor).replace('%', ''));
+  return Number.isFinite(x) && x > 0 && x <= 100 ? x : 0;
+}
+
+/** '133000' ms → '2 min 13 s' */
+export function duracion(ms) {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s} s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} min${s % 60 ? ` ${s % 60} s` : ''}`;
+  return `${Math.floor(m / 60)} h ${m % 60} min`;
+}
+
 /** Texto que se muestra para un valor enviado, sin exponer más de lo necesario. */
-export function mostrar(valor, categoria) {
+export function mostrar(valor, categoria, nombre = '') {
   const v = String(valor).trim();
   switch (categoria) {
+    case 'atencion': {
+      const ms = milisegundos(nombre, v);
+      if (ms) return duracion(ms);
+      const pct = porcentajeScroll(nombre, v);
+      if (pct) return `${pct}%`;
+      return recortar(v, 30);
+    }
     case 'pagina':
     case 'origen': {
       const u = comoUrl(v);
@@ -354,11 +396,15 @@ export function analizarPeticion(p, ctx = {}) {
   const eids = new Set();
   const agregar = (categoria, campo, valor, nota) => {
     const lista = datos[categoria] || (datos[categoria] = []);
-    if (lista.length < 6 && !lista.some(x => x.campo === campo)) lista.push({ campo, valor: mostrar(valor, categoria), nota });
+    if (lista.length < 6 && !lista.some(x => x.campo === campo)) lista.push({ campo, valor: mostrar(valor, categoria, campo), nota });
   };
   const contexto = { sitioPagina: p.sitioPagina, idConocido: ctx.idConocido };
+  let tiempoMs = 0;
+  let scrollPct = 0;
 
   for (const [nombre, valor] of camposDe(p.url, p.cuerpo)) {
+    tiempoMs += milisegundos(nombre, valor);
+    scrollPct = Math.max(scrollPct, porcentajeScroll(nombre, valor));
     const pal = palabras(nombre);
     // Identificadores "universales" en subastas de anuncios (OpenRTB): user.ext.eids[].source
     if (pal.includes('eids') && pal[pal.length - 1] === 'source' && /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(valor)) {
@@ -397,7 +443,7 @@ export function analizarPeticion(p, ctx = {}) {
     }
   }
 
-  return { datos, ids: [...ids], cookies, eids: [...eids] };
+  return { datos, ids: [...ids], cookies, eids: [...eids], tiempoMs, scrollPct };
 }
 
 const COOKIES_CONSENTIMIENTO = /consent|gdpr|usprivacy|optanon|cookieyes|cookielaw|didomi|euconsent|_cmp|cmpc/i;

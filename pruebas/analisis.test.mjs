@@ -145,3 +145,28 @@ test('rastreadores disfrazados de subdominio propio', () => {
   const e = empresaDe('s2.flylax.com');
   assert.ok(e && e.disfrazado, 'debería detectarlo como disfrazado');
 });
+
+test('tiempo activo y desplazamiento (Google Analytics 4)', async () => {
+  const { duracion } = await import('../src/analisis.js');
+  const r = analizarPeticion({
+    url: 'https://region1.google-analytics.com/g/collect?v=2&cid=1234567890.1700000000',
+    cuerpo: { texto: 'en=user_engagement&_et=100000\nen=scroll&epn.percent_scrolled=90&_et=33000' },
+    sitioPagina: 'ejemplo.cl',
+  });
+  assert.equal(r.tiempoMs, 133000);
+  assert.equal(r.scrollPct, 90);
+  assert.equal(duracion(r.tiempoMs), '2 min 13 s');
+  assert.ok(r.datos.atencion.some(x => x.valor === '1 min 40 s'));
+  assert.ok(r.datos.atencion.some(x => x.valor === '90%'));
+});
+
+test('quién es responsable de una llamada', async () => {
+  const { elegirScript } = await import('../src/empresas.js');
+  // Un rastreador conocido en cualquier lugar de la pila gana.
+  assert.equal(elegirScript(['https://ejemplo.cl/jquery.js', 'https://static.hotjar.com/c/hotjar.js'], 'ejemplo.cl').sitio, 'hotjar.com');
+  // Una biblioteca en un CDN llamada por el propio sitio: es el sitio.
+  assert.equal(elegirScript(['https://cdnjs.cloudflare.com/ajax/libs/jquery.js', 'https://ejemplo.cl/app.js'], 'ejemplo.cl').sitio, 'ejemplo.cl');
+  // Un script desconocido que llama a la biblioteca del sitio: es el script desconocido (el más externo).
+  assert.equal(elegirScript(['https://ejemplo.cl/jquery.js', 'https://desconocido.test/x.js'], 'ejemplo.cl').sitio, 'desconocido.test');
+  assert.equal(elegirScript([], 'ejemplo.cl'), null);
+});

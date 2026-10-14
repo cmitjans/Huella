@@ -41,13 +41,17 @@ Chrome puede avisar al iniciar que tienes extensiones en modo de desarrollador: 
 ## Cómo leerla
 
 - **El número sobre el ícono**: cuántas empresas de rastreo recibieron datos tuyos en la página que estás viendo.
-- **La ventana** (al tocar el ícono): esas empresas y qué recibió cada una. Las etiquetas amarillas son datos que te identifican.
+- **La ventana** (al tocar el ícono): esas empresas, qué recibió cada una y qué observa de ti en la página. Las etiquetas amarillas son datos que te identifican.
+- **En vivo al costado** (botón de la ventana): un panel que se queda abierto junto a la página y muestra, en el momento en que ocurre, cada envío a una empresa de rastreo y cada cosa que empiezan a observar.
 - **El mapa** (botón "Ver el mapa completo"): al centro estás tú; en el primer anillo, los sitios que visitaste; en el segundo, las empresas que recibieron datos desde ellos. Las líneas rojas son empresas pasándose identificadores tuyos. Haz clic en cualquier punto para ver el detalle.
 
 ### Qué datos reconoce
 
 | Dato | Qué significa |
 | --- | --- |
+| Lo que escribes | Un script de la empresa leyó el contenido de un campo donde escribiste (correo, teléfono, buscador…), aunque no lo hayas enviado. Huella anota el tipo de campo, nunca lo que escribiste. |
+| Comportamiento | Su script escucha en toda la página tus movimientos del mouse, clics, teclas, desplazamiento, cambios de pestaña o lo que copias y pegas. |
+| Tiempo en la página | Cuánto rato estuviste activo y hasta dónde bajaste, cuando la empresa lo recibe (Google Analytics lo envía). |
 | Datos personales | Correo, teléfono, nombre o ciudad, a veces "cifrados" con hash (la empresa igual puede compararlos con los suyos). |
 | Cookie | Un identificador que la empresa guardó en tu navegador y le llega desde todos los sitios donde está presente. |
 | Identificador | Un código de tu navegador, tu sesión o del clic que hiciste en un anuncio. |
@@ -66,6 +70,14 @@ Chrome puede avisar al iniciar que tienes extensiones en modo de desarrollador: 
 | Recibieron el mismo identificador | Dos empresas recibieron exactamente el mismo código tuyo. |
 | Te redirigió / la llamó desde su espacio | Una petición pasó de una empresa a otra, o un anuncio de una cargó contenido de otra (línea punteada: prueba más débil). |
 
+## Clics, teclas y grabaciones
+
+Las cookies no ven tus clics ni tus teclas: son solo un número que te identifica. Lo que observa lo que haces son **scripts** que las empresas cargan en la página (por ejemplo, las grabaciones de sesión de Hotjar, Microsoft Clarity o FullStory). La cookie sirve para unir esa información a ti entre visitas.
+
+Huella detecta esos scripts desde dentro de la página: qué eventos escuchan, si leen lo que escribes en un formulario y cuánto envían. No puede mostrar el contenido de cada grabación, porque suele viajar comprimido.
+
+Estudios sobre esto: [Princeton, 2017](https://blog.citp.princeton.edu/2017/11/15/no-boundaries-exfiltration-of-personal-data-by-session-replay-scripts) (grabaciones de sesión que capturaban teclas y formularios) y [KU Leuven, 2022](https://www.usenix.org/conference/usenixsecurity22/presentation/senol) (sitios que enviaban el correo a rastreadores antes de apretar "Enviar").
+
 ## Lo que no puede ver
 
 Huella ve lo que sale de tu navegador, no lo que pasa después: si las empresas venden tus datos, los cruzan con otras bases o los envían de servidor a servidor, eso ocurre fuera de tu computador. Tampoco ve las apps del teléfono (para eso está [Rastreadores](https://github.com/cmitjans/Rastreadores)). La sección "Lo que no se ve" de la extensión explica esto y cómo pedirle tus datos a cada empresa.
@@ -77,7 +89,8 @@ Huella ve lo que sale de tu navegador, no lo que pasa después: si las empresas 
 | Leer las peticiones de las páginas (`webRequest` y acceso a los sitios) | Ver a quién le envía datos cada página y qué lleva. Solo observa; no puede bloquear ni modificar. |
 | Almacenamiento | Guardar el registro en tu computador. |
 | Cookies | Mostrarte qué cookies tiene guardadas una empresa, si lo pides. El valor nunca se muestra. |
-| Script en las páginas | Detectar técnicas de huella digital. Deja pasar cada llamada sin cambios y solo anota cuál fue. |
+| Script en las páginas | Detectar técnicas de huella digital, qué eventos escuchan los scripts de terceros y si leen lo que escribes. Deja pasar cada llamada sin cambios y solo anota qué tipo de cosa fue; nunca lee ni guarda lo que escribes. |
+| Panel lateral | Mostrar Huella en vivo al costado de la página. |
 
 - **No se conecta a internet**: su política de seguridad (`connect-src 'none'` en `manifest.json`) se lo prohíbe, y la prueba automática lo verifica.
 - Los identificadores se guardan recortados (`8473… (19 caracteres)`). Para comparar identificadores entre empresas usa un resumen que no permite recuperarlos, y lo borra al cerrar Chrome.
@@ -89,7 +102,7 @@ Huella ve lo que sale de tu navegador, no lo que pasa después: si las empresas 
 Las pruebas no usan datos de nadie ni salen a internet:
 
 - `node --test pruebas/*.test.mjs` prueba el análisis con valores inventados.
-- `npm install && npx playwright install chromium && node pruebas/e2e/prueba-local.mjs` abre un Chromium real con la extensión. Todos los dominios se redirigen a un servidor falso en tu propio computador, con valores como `PRUEBA9x8y7z6`. No se simulan correos ni teléfonos.
+- `npm install && npx playwright install chromium && node pruebas/e2e/prueba-local.mjs` abre un Chromium real con la extensión. Todos los dominios se redirigen a un servidor falso en tu propio computador, con valores como `PRUEBA9x8y7z6`. Una "grabación de sesión" falsa escucha la página y lee un campo donde la prueba escribe `texto-de-prueba`; la prueba verifica que ese texto nunca se guarde. No se simulan correos ni teléfonos.
 
 ## De dónde sale la lista de empresas
 
@@ -103,6 +116,6 @@ De la lista pública de rastreadores de [DuckDuckGo](https://github.com/duckduck
 | `src/analisis.js` | Reconoce qué datos lleva cada petición (sin guardar nada). |
 | `src/empresas.js` | A qué empresa pertenece cada dominio. |
 | `src/registro.js` | Guarda el resumen en el almacenamiento local. |
-| `src/pagina-huella.js`, `src/puente.js` | Detectan técnicas de huella digital en las páginas. |
-| `ui/ventana.*` | La ventana del ícono. |
+| `src/pagina-huella.js`, `src/puente.js` | Detectan huella digital, escuchas y lectura de formularios en las páginas. |
+| `ui/ventana.*`, `ui/panel.html` | La ventana del ícono y el panel en vivo. |
 | `ui/mapa.*` | El mapa, las listas y los ajustes. |

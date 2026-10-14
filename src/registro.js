@@ -67,8 +67,11 @@ export function envio(e, ahora = Date.now()) {
   const t = obtener('t:' + e.tercero, () => ({
     s: e.tercero, n: 0, primero: ahora, ultimo: ahora, hosts: {}, datos: {}, sitios: {}, ej: {}, cookies: {}, duracion: {}, tecnicas: {},
   }));
-  t.n++;
+  if (!e.observacion) t.n++;
   t.ultimo = ahora;
+  t.bytes = (t.bytes || 0) + (e.bytes || 0);
+  if (e.tiempoMs) t.tiempoMs = (t.tiempoMs || 0) + e.tiempoMs;
+  if (e.scrollPct) t.scrollMax = Math.max(t.scrollMax || 0, e.scrollPct);
   t.hosts[e.host] = (t.hosts[e.host] || 0) + 1;
   limitar(t.hosts, 25);
   t.sitios[e.sitioPagina] = ahora;
@@ -89,7 +92,7 @@ export function envio(e, ahora = Date.now()) {
   const p = obtener('p:' + e.sitioPagina, () => ({ s: e.sitioPagina, visitas: 0, primero: ahora, ultimo: ahora, terc: {} }));
   p.ultimo = ahora;
   const pt = p.terc[e.tercero] || (p.terc[e.tercero] = { n: 0, u: ahora, d: {} });
-  pt.n++;
+  if (!e.observacion) pt.n++;
   pt.u = ahora;
   for (const cat of Object.keys(e.datos)) pt.d[cat] = (pt.d[cat] || 0) + 1;
   if (Object.keys(p.terc).length > LIMITE_TERCEROS_POR_SITIO) {
@@ -119,11 +122,29 @@ export function huella(sitioPagina, sitioScript, tecnica, script, ahora = Date.n
     return;
   }
   envio({
-    sitioPagina, tercero: sitioScript, host: hostSeguro(script) || sitioScript, cookies: [],
+    sitioPagina, tercero: sitioScript, host: hostSeguro(script) || sitioScript, cookies: [], observacion: true,
     datos: { huella: [{ campo: tecnica, valor: recortar(script, 90), nota: 'Script que la usó' }] },
   }, ahora);
   const t = registros.get('t:' + sitioScript);
   t.tecnicas[tecnica] = (t.tecnicas[tecnica] || 0) + 1;
+}
+
+/**
+ * Algo que un script de un tercero observó en la página: 'mouse', 'teclas'… o 'lectura:<tipo de campo>'.
+ * Se anota qué fue y qué script lo hizo; nunca lo que escribiste.
+ */
+export function observa(sitioPagina, tercero, que, script, ahora = Date.now()) {
+  const cat = que.startsWith('lectura:') ? 'escritura' : 'comportamiento';
+  envio({
+    sitioPagina, tercero, host: hostSeguro(script) || tercero, cookies: [], observacion: true,
+    datos: { [cat]: [{ campo: que, valor: recortar(script, 90), nota: 'Script que lo hizo' }] },
+  }, ahora);
+  const t = registros.get('t:' + tercero);
+  t.obs = t.obs || {};
+  t.obs[que] = (t.obs[que] || 0) + 1;
+  t.obsSitios = t.obsSitios || {};
+  const lista = t.obsSitios[que] || (t.obsSitios[que] = []);
+  if (!lista.includes(sitioPagina)) { lista.push(sitioPagina); if (lista.length > 20) lista.shift(); }
 }
 
 /** Un tercero pasándole algo a otro. */

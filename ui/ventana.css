@@ -1,0 +1,48 @@
+body.ventana { width: 400px; min-height: 200px; }
+body.panel { min-width: 280px; }
+
+header { padding: 16px 18px 12px; border-bottom: 1px solid var(--linea); }
+#sitio { font-size: 22px; overflow-wrap: anywhere; }
+#resumen { margin: 6px 0 0; font-size: 14.5px; }
+.vivo-boton { margin-top: 10px; }
+
+.pausa { margin: 10px 18px 0; padding: 8px 10px; border: 1.5px dashed var(--grafito); border-radius: 6px; font-size: 13.5px; display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+
+main { padding: 4px 18px 6px; }
+body.ventana main { max-height: 420px; overflow-y: auto; }
+main > ol { list-style: none; margin: 0; padding: 0; }
+
+.empresa { padding: 11px 0; border-bottom: 1px solid var(--linea); }
+.empresa:last-child { border-bottom: 0; }
+.nombre { display: flex; align-items: baseline; gap: 4px; justify-content: space-between; }
+.nombre strong { font-family: var(--titulo); font-weight: 600; font-size: 16px; }
+.nombre span.tipo { font-size: 12.5px; color: var(--grafito); white-space: nowrap; }
+.empresa .datos { margin-top: 6px; }
+
+/* Lo que observa dentro de la página: frases, no etiquetas. */
+.observa { margin: 5px 0 0; padding: 0; list-style: none; font-size: 13.5px; line-height: 1.4; }
+.observa li { margin: 3px 0; padding-left: 14px; position: relative; }
+.observa li::before { content: ""; position: absolute; left: 2px; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--marca-solida); }
+.observa li.rojo { color: var(--rojo); font-weight: 600; }
+.observa li.rojo::before { background: var(--rojo); }
+.volumen { margin: 5px 0 0; font-size: 12px; color: var(--grafito); }
+
+details { margin: 8px 0 4px; font-size: 13.5px; }
+summary { cursor: pointer; color: var(--grafito); }
+details li { padding: 2px 0; }
+.propia { margin: 10px 0 4px; padding: 8px 10px; background: var(--papel-2); border-radius: 6px; font-size: 13.5px; }
+
+/* Registro en vivo (solo en el panel lateral). */
+.vivo { padding: 10px 18px 6px; border-top: 1px solid var(--linea); }
+.vivo h2 { font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.latido { width: 8px; height: 8px; border-radius: 50%; background: var(--rojo); animation: latido 1.6s ease-in-out infinite; }
+@keyframes latido { 50% { opacity: .25; } }
+.vivo ol { list-style: none; margin: 8px 0 0; padding: 0; font-size: 13px; }
+.vivo li { display: grid; grid-template-columns: 62px 1fr; gap: 0 8px; padding: 4px 0; border-bottom: 1px dotted var(--linea); }
+.vivo li .hora { color: var(--grafito); font-variant-numeric: tabular-nums; }
+.vivo li.fuerte .que { color: var(--rojo); }
+.vivo li.nuevo { animation: nuevo 1.4s ease-out; }
+@keyframes nuevo { from { background: var(--marca); } to { background: transparent; } }
+
+footer { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 12px 18px 16px; border-top: 1px solid var(--linea); }
+footer p { margin: 0; font-size: 12px; color: var(--grafito); }

@@ -1,7 +1,8 @@
 // Página principal: el mapa de quién recibe tus datos y con quién los comparte.
-import { TIPOS, DATOS, ORDEN_DATOS, ENLACES, TECNICAS, SIEMPRE } from '../src/categorias.js';
+import { TIPOS, DATOS, ORDEN_DATOS, ENLACES, TECNICAS, SIEMPRE, OBSERVA, CAMPOS } from '../src/categorias.js';
+import { duracion } from '../src/analisis.js';
 import { FECHA_LISTA } from '../src/empresas.js';
-import { el, etiquetasDatos, puntoTipo, plural, fecha, construirModelo, IDENTIFICAN } from './comun.js';
+import { el, etiquetasDatos, puntoTipo, plural, fecha, peso, unir, construirModelo, OBSERVADO } from './comun.js';
 
 const $ = id => document.getElementById(id);
 const SVG = 'http://www.w3.org/2000/svg';
@@ -74,6 +75,10 @@ function dibujarTitular() {
   t.append(`Desde el ${fecha(modelo.desde)}, `, el('strong', {}, plural(empresas.length, 'empresa', 'empresas')),
     ` recibieron datos tuyos desde `, el('strong', {}, plural(sitios.length, 'sitio', 'sitios')), ' que visitaste.');
   if (comparten.size) t.append(' ', el('strong', {}, String(comparten.size)), ' de ellas se pasaron identificadores tuyos.');
+  const leen = empresas.filter(e => Object.keys(e.obs).some(q => q.startsWith('lectura:')));
+  const escuchan = empresas.filter(e => Object.keys(e.obs).some(q => OBSERVA[q]));
+  if (leen.length) t.append(' ', el('strong', {}, String(leen.length)), ` ${leen.length === 1 ? 'leyó' : 'leyeron'} lo que escribiste en formularios.`);
+  else if (escuchan.length) t.append(' ', el('strong', {}, String(escuchan.length)), ` ${escuchan.length === 1 ? 'observó' : 'observaron'} tus clics, teclas o movimientos.`);
 }
 
 // ------------------------------------------------------------ mapa radial
@@ -436,8 +441,40 @@ function detalleEmpresa(e) {
       ' algunas peticiones fueron a una dirección del mismo sitio que en realidad pertenece a esta empresa. Es una forma de evitar los bloqueadores de rastreo.'));
   }
 
+  // Qué observó dentro de la página
+  const lecturas = Object.entries(e.obs).filter(([q]) => q.startsWith('lectura:'));
+  const escuchas = Object.keys(OBSERVA).filter(q => e.obs[q]);
+  const lineasTiempo = [];
+  if (e.tiempoMs >= 1000) lineasTiempo.push(`que estuviste ${duracion(e.tiempoMs)} activo en sus sitios`);
+  if (e.scrollMax) lineasTiempo.push(`hasta dónde bajaste en cada página (hasta el ${e.scrollMax}%)`);
+  if (lecturas.length || escuchas.length || lineasTiempo.length) {
+    partes.push(el('h3', {}, 'Qué observa de ti en la página'));
+    const lista = el('ul', { class: 'recibido' });
+    for (const [q, n] of lecturas) {
+      const campo = CAMPOS[q.slice(8)] || CAMPOS.otro;
+      lista.append(el('li', {},
+        el('div', {}, el('span', { class: 'que rojo' }, `Leyó lo que escribiste en ${campo}`), el('span', { class: 'cuanto' }, ` en ${plural(n, 'visita', 'visitas')}`)),
+        el('p', { class: 'explica' }, DATOS.escritura.texto, ' Huella no guarda lo que escribiste, solo que fue leído.'),
+        e.obsSitios[q]?.length ? chipsSitios(e.obsSitios[q]) : null));
+    }
+    for (const q of escuchas) {
+      lista.append(el('li', {},
+        el('div', {}, el('span', { class: 'que' }, OBSERVA[q].nombre), el('span', { class: 'cuanto' }, ` en ${plural(e.obs[q], 'visita', 'visitas')}`)),
+        el('p', { class: 'explica' }, OBSERVA[q].texto)));
+    }
+    if (lineasTiempo.length) {
+      lista.append(el('li', {}, el('div', {}, el('span', { class: 'que' }, 'Tiempo en la página')),
+        el('p', { class: 'explica' }, `Le informaron ${unir(lineasTiempo)}.`)));
+    }
+    partes.push(lista);
+    if (escuchas.length) {
+      partes.push(el('p', { class: 'apagado pequeno' }, 'Escuchar no siempre significa enviar: Huella ve que su script recibe estos eventos, pero no puede ver qué hace con ellos si los envía comprimidos.'));
+    }
+  }
+  if (e.bytes) partes.push(el('p', { class: 'apagado pequeno' }, `En total le enviaste ${peso(e.bytes)} en ${plural(e.n, 'envío', 'envíos')}.`));
+
   // Qué recibió
-  const cats = ORDEN_DATOS.filter(c => e.datos[c]);
+  const cats = ORDEN_DATOS.filter(c => e.datos[c] && !OBSERVADO.has(c));
   if (cats.length) {
     partes.push(el('h3', {}, 'Qué recibió'));
     partes.push(el('ul', { class: 'recibido' }, cats.map(c => el('li', {},

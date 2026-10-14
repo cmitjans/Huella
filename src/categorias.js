@@ -36,6 +36,16 @@ export const TIPOS = {
 
 /** Qué dato tuyo salió. El orden es el de importancia al mostrarlos. */
 export const DATOS = {
+  escritura: {
+    nombre: 'Lo que escribes',
+    corto: 'Lo que escribes',
+    texto: 'Su script leyó el contenido de un campo donde escribiste. Puede pasar antes de que aprietes Enviar, aunque al final no lo envíes.',
+  },
+  comportamiento: {
+    nombre: 'Lo que haces en la página',
+    corto: 'Comportamiento',
+    texto: 'Su script escucha en toda la página lo que haces: movimientos del mouse, clics, teclas, cuánto bajas o cuándo cambias de pestaña.',
+  },
   contacto: {
     nombre: 'Correo, teléfono u otros datos personales',
     corto: 'Datos personales',
@@ -60,6 +70,11 @@ export const DATOS = {
     nombre: 'Grabación de tu visita',
     corto: 'Grabación',
     texto: 'Movimientos del mouse, clics, desplazamientos y a veces lo que escribes, para reproducir tu visita como un video.',
+  },
+  atencion: {
+    nombre: 'Cuánto tiempo miraste y hasta dónde bajaste',
+    corto: 'Tiempo en la página',
+    texto: 'Cuánto rato estuviste activo en la página y qué porcentaje de ella recorriste.',
   },
   pagina: {
     nombre: 'La página exacta que estás viendo',
@@ -99,6 +114,32 @@ export const DATOS = {
 };
 
 export const ORDEN_DATOS = Object.keys(DATOS);
+
+/** Lo que un script puede escuchar en toda la página (detectado en pagina-huella.js). */
+export const OBSERVA = {
+  mouse: { nombre: 'Movimientos del mouse', texto: 'Cada movimiento del puntero sobre la página.' },
+  clics: { nombre: 'Clics y toques', texto: 'Dónde y cuándo haces clic o tocas la pantalla.' },
+  teclas: { nombre: 'Teclas que presionas', texto: 'Cuándo presionas y sueltas cada tecla. Con eso se puede medir tu ritmo al escribir, que es casi tan propio como una firma.' },
+  texto: { nombre: 'Lo que escribes en formularios', texto: 'Se entera cada vez que cambia el contenido de un campo.' },
+  desplazamiento: { nombre: 'Cómo bajas por la página', texto: 'Hasta dónde llegas y a qué velocidad lees.' },
+  atencion: { nombre: 'Cuándo miras o dejas la pestaña', texto: 'Sabe si cambias de pestaña o de ventana, y así cuánto rato la miraste de verdad.' },
+  portapapeles: { nombre: 'Lo que copias y pegas', texto: 'Se entera cuando copias, cortas o pegas.' },
+  seleccion: { nombre: 'El texto que seleccionas', texto: 'Se entera de qué texto marcas.' },
+};
+
+/** Tipo de campo cuyo contenido leyó un script. Nunca se guarda lo escrito. */
+export const CAMPOS = {
+  correo: 'un campo de correo',
+  telefono: 'un campo de teléfono',
+  contrasena: 'un campo de contraseña',
+  tarjeta: 'un campo de tarjeta',
+  documento: 'un campo de RUT o documento',
+  nombre: 'un campo de nombre',
+  direccion: 'un campo de dirección',
+  busqueda: 'el buscador',
+  texto: 'un cuadro de texto',
+  otro: 'un campo de formulario',
+};
 
 /** Cómo se pasan datos entre empresas. */
 export const ENLACES = {

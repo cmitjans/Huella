@@ -35,7 +35,12 @@ function pagina() {
   return `<!doctype html><meta charset="utf-8"><title>Página de prueba</title>
 <h1>Página de prueba de Huella</h1>
 <p>Esta página es local y falsa. Simula un sitio con rastreadores, con valores inventados.</p>
+<form onsubmit="return false"><input type="email" name="correo" id="correo" placeholder="Correo"></form>
+<div style="height: 2000px"></div>
 <script>
+// El propio sitio escucha sus clics y lee su formulario: eso es normal y no debe aparecer.
+document.addEventListener('click', () => {});
+document.getElementById('correo').addEventListener('input', e => { document.body.dataset.largo = e.target.value.length; });
 const cargar = src => new Promise(ok => { const i = new Image(); i.onload = i.onerror = ok; i.src = src; });
 (async () => {
   const aqui = encodeURIComponent(location.href);
@@ -54,6 +59,9 @@ const cargar = src => new Promise(ok => { const i = new Image(); i.onload = i.on
   const f = document.createElement('iframe');
   f.src = '${u('securepubads.g.doubleclick.net', '/marco')}';
   document.body.append(f);
+  // Google Analytics 4: tiempo activo (100 s + 33 s) y hasta dónde bajaste.
+  await fetch('${u('region1.google-analytics.com', '/g/collect')}?v=2&cid=1234567890.1700000000', { method: 'POST',
+    body: 'en=user_engagement&_et=100000\\nen=scroll&epn.percent_scrolled=90&_et=33000' }).catch(() => {});
   // Grabación de sesión y huella digital.
   for (const src of ['${u('static.hotjar.com', '/c.js')}', '${u('api.fpjs.io', '/fp.js')}']) {
     const s = document.createElement('script'); s.src = src; document.body.append(s);
@@ -62,6 +70,24 @@ const cargar = src => new Promise(ok => { const i = new Image(); i.onload = i.on
 })();
 </script>`;
 }
+
+// Una "grabación de sesión" falsa: escucha mouse, teclas, desplazamiento y cambios de pestaña,
+// lee el campo de correo cuando lo dejas (sin enviarlo a ningún lado) y manda paquetes de relleno.
+const grabacionJs = () => `
+(() => {
+  const nada = () => {};
+  document.addEventListener('mousemove', nada);
+  document.addEventListener('keydown', nada);
+  window.addEventListener('scroll', nada);
+  document.addEventListener('visibilitychange', nada);
+  const campo = document.getElementById('correo');
+  if (campo) campo.addEventListener('change', () => { const leido = campo.value; void leido; });
+  let n = 0;
+  const t = setInterval(() => {
+    fetch('${u('in.hotjar.com', '/api/v2/client/ws')}', { method: 'POST', body: 'x'.repeat(6000) }).catch(nada);
+    if (++n >= 4) clearInterval(t);
+  }, 300);
+})();`;
 
 const FP_JS = `
 (() => {
@@ -97,7 +123,7 @@ const servidor = https.createServer({ key: readFileSync(join(tmp, 'clave.pem')),
   }
   if (ruta.endsWith('.js')) {
     res.writeHead(200, { 'content-type': 'text/javascript' });
-    return res.end(host === 'api.fpjs.io' ? FP_JS : '/* grabación falsa */');
+    return res.end(host === 'api.fpjs.io' ? FP_JS : grabacionJs());
   }
   if (req.method === 'POST' || req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
   return gif();
@@ -137,6 +163,18 @@ try {
   const pag = await contexto.newPage();
   await pag.goto(u('sitio-prueba.test', '/'));
   await pag.waitForFunction(() => document.title === 'listo', null, { timeout: 15000 });
+  // Lo que haría una persona: mover el mouse, escribir un texto inventado, salir del campo y bajar.
+  const interactuar = async () => {
+    await pag.mouse.move(80, 80);
+    await pag.mouse.move(420, 260, { steps: 8 });
+    await pag.click('#correo');
+    await pag.keyboard.type('texto-de-prueba');
+    await pag.keyboard.press('Tab');
+    await pag.mouse.wheel(0, 500);
+    await pag.waitForTimeout(1500);
+  };
+  await interactuar();
+  const largo = await pag.evaluate(() => document.body.dataset.largo);
   await pag.goto(u('otro-sitio.test', '/'));
   await pag.waitForTimeout(2500);   // el registro se guarda cada segundo
 
@@ -168,6 +206,26 @@ try {
   revisar('llamada desde el recuadro de Google a Microsoft', () => assert.ok(enlace('doubleclick.net', 'adnxs.com', 'llamada')));
   revisar('Google y Meta recibieron el mismo identificador', () => assert.ok(enlace('google-analytics.com', 'facebook.com', 'mismo-id')));
   revisar('grabación de sesión (Hotjar)', () => assert.ok(t('hotjar.com').datos?.grabacion));
+  revisar('la página sigue funcionando (leyó su propio campo)', () => assert.equal(largo, '15'));
+  revisar('la grabación escucha mouse, teclas, desplazamiento y cambios de pestaña', () => {
+    for (const q of ['mouse', 'teclas', 'desplazamiento', 'atencion']) assert.ok(t('hotjar.com').obs?.[q], q);
+  });
+  revisar('la grabación leyó el campo de correo', () => assert.ok(t('hotjar.com').obs?.['lectura:correo']));
+  revisar('lo que hace el propio sitio no se cuenta', () => {
+    assert.ok(!datos['t:sitio-prueba.test']);
+    assert.ok(!datos['p:sitio-prueba.test'].propia);
+  });
+  revisar('se midió lo que envió la grabación', () => assert.ok(t('hotjar.com').bytes > 20000, String(t('hotjar.com').bytes)));
+  revisar('tiempo activo y desplazamiento informados a Google', () => {
+    assert.equal(t('google-analytics.com').tiempoMs, 133000);
+    assert.equal(t('google-analytics.com').scrollMax, 90);
+  });
+  const sesion = await sw.evaluate(() => chrome.storage.session.get(null));
+  revisar('lo que escribiste nunca se guarda', () => {
+    const todo = JSON.stringify(datos) + JSON.stringify(sesion);
+    assert.ok(!todo.includes('texto-de-prueba'));
+    assert.ok(!todo.includes('xxxxxxxx'));
+  });
   revisar('huella digital: dibujo, tarjeta gráfica y audio', () => {
     for (const x of ['canvas', 'webgl', 'audio']) assert.ok(t('fpjs.io').tecnicas?.[x], x);
   });
@@ -181,7 +239,7 @@ try {
   // Capturas de las pantallas.
   await pag.goto(u('sitio-prueba.test', '/'));
   await pag.waitForFunction(() => document.title === 'listo', null, { timeout: 15000 });
-  await pag.waitForTimeout(1200);
+  await interactuar();
   const tabId = await sw.evaluate(async () => (await chrome.tabs.query({ url: '*://sitio-prueba.test/*' }))[0]?.id);
   const ventana = await contexto.newPage();
   await ventana.setViewportSize({ width: 380, height: 640 });
@@ -189,7 +247,23 @@ try {
   await ventana.waitForTimeout(600);
   const textoVentana = await ventana.textContent('body');
   revisar('la ventana muestra las empresas', () => assert.ok(/Google/.test(textoVentana) && /Microsoft/.test(textoVentana), textoVentana.slice(0, 200)));
+  revisar('la ventana cuenta lo que observan', () => {
+    assert.ok(textoVentana.includes('Leyó lo que escribiste en un campo de correo'), textoVentana.slice(0, 400));
+    assert.ok(textoVentana.includes('movimientos del mouse'));
+    assert.ok(textoVentana.includes('2 min 13 s'));
+  });
   await ventana.screenshot({ path: join(CAPTURAS, 'ventana.png'), fullPage: true });
+
+  // Panel lateral en vivo: debe actualizarse solo cuando llegan datos nuevos.
+  const panel = await contexto.newPage();
+  await panel.setViewportSize({ width: 400, height: 1000 });
+  await panel.goto(`chrome-extension://${id}/ui/panel.html?tab=${tabId}`);
+  await panel.waitForSelector('.vivo li');
+  await pag.evaluate(src => fetch(src, { method: 'POST', body: 'en=user_engagement&_et=5000' }), u('region1.google-analytics.com', '/g/collect?v=2'));
+  let enVivo = true;
+  try { await panel.waitForFunction(() => document.body.textContent.includes('2 min 18 s'), null, { timeout: 5000 }); } catch { enVivo = false; }
+  revisar('el panel se actualiza en vivo', () => assert.ok(enVivo));
+  await panel.screenshot({ path: join(CAPTURAS, 'panel.png'), fullPage: true });
 
   const mapa = await contexto.newPage();
   const errores = [];
@@ -197,6 +271,14 @@ try {
   await mapa.goto(`chrome-extension://${id}/ui/mapa.html#mapa`);
   await mapa.waitForSelector('#lienzo svg');
   await mapa.screenshot({ path: join(CAPTURAS, 'mapa.png'), fullPage: true });
+  await mapa.click('.nodo.empresa[aria-label="Empresa Hotjar"] circle');
+  await mapa.waitForTimeout(300);
+  const detalleHotjar = await mapa.textContent('#detalle');
+  revisar('el mapa explica lo que observa la grabación', () => {
+    assert.ok(detalleHotjar.includes('Qué observa de ti en la página'));
+    assert.ok(detalleHotjar.includes('Teclas que presionas'));
+  });
+  await mapa.screenshot({ path: join(CAPTURAS, 'mapa-hotjar.png'), fullPage: true });
   await mapa.click('.nodo.empresa[aria-label="Empresa Microsoft"] circle');
   await mapa.waitForTimeout(300);
   await mapa.screenshot({ path: join(CAPTURAS, 'mapa-microsoft.png'), fullPage: true });
