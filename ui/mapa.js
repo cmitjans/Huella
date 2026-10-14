@@ -632,6 +632,7 @@ function dibujarAjustes() {
     : 'Activo: se anota a quién le envían datos las páginas que visitas.';
   $('alternar-pausa').textContent = a.pausa ? 'Reanudar el registro' : 'Pausar el registro';
   $('dias').value = String(a.dias);
+  $('version').textContent = `Estás usando Huella ${chrome.runtime.getManifest().version}.`;
 }
 
 async function cambiarAjustes(cambios) {

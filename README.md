@@ -10,28 +10,19 @@ El repositorio es la extensión tal cual: se carga directo desde una copia en tu
 
 ### Con PowerShell (no hay que instalar nada)
 
-Abre **PowerShell** desde el menú Inicio, pega esto y presiona Enter. Baja los archivos de la extensión uno por uno desde GitHub y los deja en la carpeta `Documentos\Huella`:
+Abre **PowerShell** desde el menú Inicio, pega esto y presiona Enter:
 
 ```powershell
-$carpeta = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'Huella'
-$ProgressPreference = 'SilentlyContinue'
-[Net.ServicePointManager]::SecurityProtocol = 'Tls12'
-$repo = 'https://api.github.com/repos/cmitjans/Huella'
-$sha = (Invoke-RestMethod "$repo/commits/main").sha
-$lista = Invoke-RestMethod "$repo/git/trees/$($sha)?recursive=1"
-foreach ($a in $lista.tree) {
-  if ($a.type -ne 'blob' -or $a.path -notmatch '^(manifest\.json|src/|ui/|iconos/)') { continue }
-  $destino = Join-Path $carpeta $a.path
-  New-Item -ItemType Directory -Force -Path (Split-Path $destino) | Out-Null
-  Invoke-WebRequest -UseBasicParsing "https://raw.githubusercontent.com/cmitjans/Huella/$sha/$($a.path)" -OutFile $destino
-}
-$version = (Get-Content (Join-Path $carpeta 'manifest.json') -Raw | ConvertFrom-Json).version
-"Listo: Huella $version en $carpeta"
+[Net.ServicePointManager]::SecurityProtocol='Tls12'; $w=New-Object Net.WebClient; $w.Encoding=[Text.Encoding]::UTF8; iex $w.DownloadString('https://raw.githubusercontent.com/cmitjans/Huella/main/herramientas/instalar.ps1')
 ```
 
-Luego en Chrome abre `chrome://extensions`, activa **Modo de desarrollador**, toca **Cargar descomprimida** y elige la carpeta que indica el mensaje final. Para **actualizar**, pega el mismo comando otra vez y toca el botón de recargar de Huella en `chrome://extensions`.
+Baja los archivos de la extensión uno por uno desde GitHub a la carpeta `Documentos\Huella` (lo que hace está en [`herramientas/instalar.ps1`](herramientas/instalar.ps1)) y crea en el escritorio un ícono **Actualizar Huella**.
 
-La tarjeta de Huella en `chrome://extensions` muestra la versión y la carpeta de donde Chrome la carga ("Cargada desde"). Deben coincidir con lo que dice el mensaje final del comando. Si Chrome la carga desde otra carpeta, cambia la primera línea del comando por esa carpeta, por ejemplo `$carpeta = 'C:\Users\tu-usuario\Downloads\Huella'`.
+Luego en Chrome abre `chrome://extensions`, activa **Modo de desarrollador**, toca **Cargar descomprimida** y elige la carpeta que indica el mensaje final.
+
+**Para actualizar** no hay que pegar nada: haz doble clic en **Actualizar Huella** en el escritorio. Al terminar abre `chrome://extensions`; toca el botón de recargar en la tarjeta de Huella. Lo registrado se conserva.
+
+La tarjeta de Huella en `chrome://extensions` muestra la versión y, en **Detalles**, la carpeta de donde Chrome la carga ("Cargada desde"). Si es otra carpeta, copia `actualizar-huella.cmd` desde `Documentos\Huella` a esa carpeta y ejecútalo desde ahí: actualiza la carpeta donde está.
 
 ### Con GitHub Desktop
 

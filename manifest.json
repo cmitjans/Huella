@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Huella",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Muestra qué datos tuyos reciben empresas terceras mientras navegas y con quién los comparten. Solo observa; todo queda en tu computador.",
   "minimum_chrome_version": "116",
   "permissions": [
