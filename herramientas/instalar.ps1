@@ -23,8 +23,9 @@ foreach ($a in $lista.tree) {
   Invoke-WebRequest -UseBasicParsing "https://raw.githubusercontent.com/cmitjans/Huella/$sha/$($a.path)" -OutFile $destino
 }
 
-# Ícono en el escritorio para la próxima vez (solo en Windows, y solo si no existe).
-if ($env:OS -eq 'Windows_NT') {
+# Ícono en el escritorio para la próxima vez: solo al instalar con el comando de PowerShell, no cuando
+# se actualiza con el ícono (así no reaparece si lo moviste a otra carpeta). Solo en Windows.
+if ($env:OS -eq 'Windows_NT' -and -not $env:HUELLA_CARPETA) {
   try {
     $escritorio = [Environment]::GetFolderPath('Desktop')
     $acceso = Join-Path $escritorio 'Actualizar Huella.lnk'
