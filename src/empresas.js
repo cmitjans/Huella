@@ -175,7 +175,9 @@ export function elegirScript(scripts, sitioPagina) {
   if (!info.length) return null;
   const rastreador = info.find(x => x.sitio !== sitioPagina && x.empresa && TIPOS[x.empresa.categoria]?.rastrea);
   if (rastreador) return rastreador;
-  const utiles = info.filter(x => !['infraestructura'].includes(x.empresa?.categoria));
-  const lista = utiles.length ? utiles : info;
-  return lista[lista.length - 1];
+  // Una biblioteca bajada desde un CDN (jQuery desde cdnjs, por ejemplo) actúa por cuenta del sitio que la eligió:
+  // el CDN solo entrega el archivo y no recibe nada de lo que hace. Si no hay otro script, cuenta como el propio sitio.
+  const utiles = info.filter(x => x.empresa?.categoria !== 'infraestructura');
+  if (!utiles.length) return { url: info[0].url, sitio: sitioPagina, empresa: null };
+  return utiles[utiles.length - 1];
 }

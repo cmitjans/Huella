@@ -168,5 +168,9 @@ test('quién es responsable de una llamada', async () => {
   assert.equal(elegirScript(['https://cdnjs.cloudflare.com/ajax/libs/jquery.js', 'https://ejemplo.cl/app.js'], 'ejemplo.cl').sitio, 'ejemplo.cl');
   // Un script desconocido que llama a la biblioteca del sitio: es el script desconocido (el más externo).
   assert.equal(elegirScript(['https://ejemplo.cl/jquery.js', 'https://desconocido.test/x.js'], 'ejemplo.cl').sitio, 'desconocido.test');
+  // Una biblioteca de un CDN sola en la pila actúa por cuenta del sitio, no del CDN.
+  assert.equal(elegirScript(['https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js'], 'ejemplo.cl').sitio, 'ejemplo.cl');
+  // El script de verificación de robots de Cloudflare sí es de Cloudflare.
+  assert.equal(elegirScript(['https://challenges.cloudflare.com/turnstile/v0/api.js'], 'ejemplo.cl').sitio, 'cloudflare.com');
   assert.equal(elegirScript([], 'ejemplo.cl'), null);
 });
